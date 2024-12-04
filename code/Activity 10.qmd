@@ -1,0 +1,129 @@
+---
+title: "Erin The Fourth of Tampa"
+author: "Juliet Nuccio"
+format: html
+editor: visual
+---
+
+## Load Packages
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+```
+
+## Prompt
+
+The year is 1973. UC Berkeley has been sued for sex-based admissions \# discrimination. Specifically, the plaintiff claims that women are discrimina-# ted against in admissions policies. The court has provided admissions data to \# you and tasked you with answering the question -- if a student applies to the \# school, will their gender play a significant role in their chance of admission?# (We are keeping the analysis limited to this dataset)
+
+## load the data
+
+```{r}
+url <- "https://waf.cs.illinois.edu/discovery/berkeley.csv"
+data <- read.csv(url)
+```
+
+## EDA
+
+```{r}
+head(data)
+summary(data)
+```
+
+## Calculate the admission rates by gender
+
+```{r}
+table(data$Gender, data$Admission)
+
+admission_rates_gender <- data %>%
+  group_by(Gender) %>%
+  summarize(
+    Total = n(),
+    Accepted = sum(Admission == "Accepted"),
+    Admission_Rate = Accepted / Total
+  )
+ggplot(admission_rates_gender, aes(x = Gender, y = Admission_Rate)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Admission Rates by Gender", 
+       x = "Gender", 
+       y = "Admission Rate") +
+  theme_minimal()
+```
+
+## Admissions rate by major
+
+```{r}
+admission_rate_major <- data %>%
+  select(Major, Admission) %>%
+  group_by(Major) %>%
+  summarize(
+    Total = n(),
+    Accepted = sum(Admission == "Accepted"),
+    Admission_Rate = Accepted / Total
+  )
+ggplot(admission_rate_major, aes(x = Major, y = Admission_Rate)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Admission Rates by Major", 
+       x = "Major", 
+       y = "Admission Rate") +
+  theme_minimal()
+```
+
+## Applications by Gender, Major
+
+```{r}
+applications_gender_major <- data %>%
+  select(Major, Gender) %>%
+  group_by(Major, Gender) %>%
+  summarize(
+    Total = n()
+  )
+ggplot(applications_gender_major, aes(x = Major, y = Total, fill = Gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Total Applications by Major and Gender", 
+       x = "Major", 
+       y = "Applications") +
+  theme_minimal()
+```
+
+## See admission rates broken down by gender and major
+
+```{r}
+admission_rates_gender_major <- data %>%
+  group_by(Major, Gender) %>%
+  summarize(
+    Total = n(),
+    Accepted = sum(Admission == "Accepted"),
+    Admission_Rate = Accepted / Total
+  )
+
+head(admission_rates_gender_major)
+
+ggplot(admission_rates_gender_major, aes(x = Major, y = Admission_Rate, fill = Gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Admission Rates by Major and Gender", 
+       x = "Major", 
+       y = "Admission Rate") +
+  theme_minimal()
+```
+
+## See the admissions rate gender difference by major
+
+```{r}
+admission_rate_diff <- admission_rates_gender_major %>%
+  select(Major, Gender, Admission_Rate) %>%
+  pivot_wider(names_from = Gender, values_from = Admission_Rate) %>%
+  mutate(Difference = M - F)
+
+ggplot(admission_rate_diff, aes(x = Major, y = Difference, fill = Difference > 0)) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = c("dark green", "skyblue"), 
+                    labels = c("Female Higher", "Male Higher")) +  # Red for below 0, skyblue for above 0
+  labs(title = "Difference Between Male and Female Admission Rates by Major",
+       x = "Major", 
+       y = "Difference (Male - Female)") +
+  geom_hline(yintercept = 0, linetype = "dotted", color = "black", size = 1) +  # Add horizontal dotted line at y = 0
+  theme_minimal() +
+  theme(legend.title = element_blank())
+```
